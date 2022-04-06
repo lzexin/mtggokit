@@ -14,8 +14,8 @@ type BlockingKMapContainer struct {
 	Tolerate  float64
 }
 
-func CreateBlockingKSetContainer(tolerate float64) *BlockingMapContainer {
-	return &BlockingMapContainer{
+func CreateBlockingKSetContainer(tolerate float64) *BlockingKMapContainer {
+	return &BlockingKMapContainer{
 		innerData: &sync.Map{},
 		Tolerate:  tolerate,
 	}
