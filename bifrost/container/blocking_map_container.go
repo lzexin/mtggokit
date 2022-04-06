@@ -3,12 +3,11 @@ package container
 import (
 	"errors"
 	"fmt"
-	"sync"
 )
 
 // 多线程读写安全的container，支持增量
 type BlockingMapContainer struct {
-	innerData *sync.Map
+	innerData *ConcurrentSliceMap
 	errorNum  int64
 	totalNum  int64
 	Tolerate  float64
@@ -16,7 +15,7 @@ type BlockingMapContainer struct {
 
 func CreateBlockingMapContainer(numPartision int, tolerate float64) *BlockingMapContainer {
 	return &BlockingMapContainer{
-		innerData: &sync.Map{},
+		innerData: CreateConcurrentSliceMap(1, 10000),
 		Tolerate:  tolerate,
 	}
 }
@@ -42,7 +41,6 @@ func (bm *BlockingMapContainer) Del(key MapKey, value interface{}) {
 }
 
 func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
-	tmpM := &sync.Map{}
 	bm.errorNum = 0
 	bm.totalNum = 0
 
@@ -63,9 +61,9 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 		}
 		switch m {
 		case DataModeAdd, DataModeUpdate:
-			tmpM.Store(k.Value(), v)
+			bm.innerData.Store(k.Value(), v)
 		case DataModeDel:
-			tmpM.Delete(k.Value())
+			bm.innerData.Delete(k.Value())
 		}
 		b, e = iterator.HasNext()
 		if e != nil {
@@ -79,7 +77,6 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 	if f > bm.Tolerate {
 		return errors.New(fmt.Sprintf("LoadBase error, tolerate[%f], err[%f]", bm.Tolerate, f))
 	}
-	bm.innerData = tmpM
 	return nil
 }
 
