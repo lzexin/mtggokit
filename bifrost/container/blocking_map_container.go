@@ -15,7 +15,7 @@ type BlockingMapContainer struct {
 
 func CreateBlockingMapContainer(numPartision int, tolerate float64) *BlockingMapContainer {
 	return &BlockingMapContainer{
-		innerData: CreateConcurrentSliceMap(1, 10000),
+		innerData: CreateConcurrentSliceMap(10000),
 		Tolerate:  tolerate,
 	}
 }

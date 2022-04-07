@@ -18,36 +18,27 @@ import (
 // 在删除元素上，最慢的是原生 map+读写锁，其次是原生 map+互斥锁，最快的是 sync.map 类型。
 
 type ConcurrentSliceMap struct {
-	totalNum int       // 当前所存数据量级
+	totalNum int       // 当前所存数据量级，新数据下标
 	index    *sync.Map // 维护数据在slice中的下标
 
 	mu         sync.RWMutex  // 读写锁 - 扩容partitions时需要加锁
 	partitions []*innerSlice // 分桶slice
 
-	numOfBuckets int // 分桶数量，溢出时增加
-	lenOfBucket  int // 桶容积
+	lenOfBucket int // 桶容积
 }
 
 type innerSlice struct {
 	s []unsafe.Pointer
 }
 
-
 // CreateConcurrentSliceMap is to create a ConcurrentSliceMap with the setting number of the partitions & len of the Buckets
 // NumOfPartitions will auto add capacity
-func CreateConcurrentSliceMap(numOfBuckets int, lenOfBucket int) *ConcurrentSliceMap {
-	var partitions []*innerSlice
-
-	for i := 0; i < numOfBuckets; i++ {
-		partitions = append(partitions, createInnerMap(lenOfBucket))
-	}
-
+func CreateConcurrentSliceMap(lenOfBucket int) *ConcurrentSliceMap {
 	return &ConcurrentSliceMap{
-		totalNum:     0,
-		index:        &sync.Map{},
-		partitions:   partitions,
-		numOfBuckets: numOfBuckets,
-		lenOfBucket:  lenOfBucket,
+		totalNum:    0,
+		index:       &sync.Map{},
+		partitions:  []*innerSlice{},
+		lenOfBucket: lenOfBucket,
 	}
 }
 
@@ -103,19 +94,17 @@ func (m *ConcurrentSliceMap) Store(key interface{}, v interface{}) {
 	}
 
 	// 2. 若没有往后增加
-	index := (m.totalNum - 1) % m.lenOfBucket
-	// 已使用当前桶的所有容量，扩桶
-	if index >= m.lenOfBucket-1 {
-		m.mu.Lock()
+	partition := m.totalNum / m.lenOfBucket //新数据的桶
+	index := m.totalNum % m.lenOfBucket     //新数据的下标
+
+	m.mu.Lock()
+	if partition >= len(m.partitions) {
 		m.partitions = append(m.partitions, createInnerMap(m.lenOfBucket))
-		m.numOfBuckets++
-		m.mu.Unlock()
-		// 指向新桶和
-		index = 0
-	} else {
-		index++
 	}
-	m.partitions[m.numOfBuckets-1].s[index] = unsafe.Pointer(&v)
+	m.mu.Unlock()
+
+	m.partitions[partition].s[index] = unsafe.Pointer(&v)
+	m.index.Store(key, m.totalNum)
 	m.totalNum++
 }
 
