@@ -20,7 +20,7 @@ func TestBlockingMapContainer_LoadBase(t *testing.T) {
 			"a\tb",
 		})), convey.ShouldBeNil)
 		convey.So(bm.errorNum, convey.ShouldEqual, 0)
-		convey.So(bm.innerData, convey.ShouldNotBeNil)
+		convey.So(bm.InnerData, convey.ShouldNotBeNil)
 
 		convey.So(bm.Len(), convey.ShouldEqual, 2)
 

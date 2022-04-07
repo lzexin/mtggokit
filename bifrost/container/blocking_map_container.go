@@ -7,7 +7,7 @@ import (
 
 // 多线程读写安全的container，支持增量
 type BlockingMapContainer struct {
-	innerData *ConcurrentSliceMap
+	InnerData *ConcurrentSliceMap
 	errorNum  int64
 	totalNum  int64
 	Tolerate  float64
@@ -15,16 +15,16 @@ type BlockingMapContainer struct {
 
 func CreateBlockingMapContainer(numPartision int, tolerate float64) *BlockingMapContainer {
 	return &BlockingMapContainer{
-		innerData: CreateConcurrentSliceMap(10000),
+		InnerData: CreateConcurrentSliceMap(10000),
 		Tolerate:  tolerate,
 	}
 }
 
 func (bm *BlockingMapContainer) Get(key MapKey) (interface{}, error) {
-	if bm.innerData == nil {
+	if bm.InnerData == nil {
 		return nil, NotExistErr
 	}
-	data, in := bm.innerData.Load(key.Value())
+	data, in := bm.InnerData.Load(key.Value())
 	if !in {
 		return nil, NotExistErr
 	}
@@ -32,12 +32,12 @@ func (bm *BlockingMapContainer) Get(key MapKey) (interface{}, error) {
 }
 
 func (bm *BlockingMapContainer) Set(key MapKey, value interface{}) error {
-	bm.innerData.Store(key.Value(), value)
+	bm.InnerData.Store(key.Value(), value)
 	return nil
 }
 
 func (bm *BlockingMapContainer) Del(key MapKey, value interface{}) {
-	bm.innerData.Delete(key.Value())
+	bm.InnerData.Delete(key.Value())
 }
 
 func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
@@ -61,9 +61,9 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 		}
 		switch m {
 		case DataModeAdd, DataModeUpdate:
-			bm.innerData.Store(k.Value(), v)
+			bm.InnerData.Store(k.Value(), v)
 		case DataModeDel:
-			bm.innerData.Delete(k.Value())
+			bm.InnerData.Delete(k.Value())
 		}
 		b, e = iterator.HasNext()
 		if e != nil {
@@ -98,7 +98,7 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 		}
 		switch m {
 		case DataModeAdd, DataModeUpdate:
-			bm.innerData.Store(k.Value(), v)
+			bm.InnerData.Store(k.Value(), v)
 		case DataModeDel:
 			bm.Del(k, v)
 		}
@@ -127,5 +127,5 @@ func (bm *BlockingMapContainer) Len() int {
 }
 
 func (bm *BlockingMapContainer) Range(f func(key, value interface{}) bool) {
-	bm.innerData.Range(f)
+	bm.InnerData.Range(f)
 }
