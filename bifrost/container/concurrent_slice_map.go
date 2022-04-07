@@ -3,6 +3,7 @@ package container
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -49,6 +50,7 @@ func createInnerMap(lenOfBuckets int) *innerSlice {
 }
 
 var NotPartition = errors.New("not partition")
+var expunged = unsafe.Pointer(new(interface{}))
 
 func (m *ConcurrentSliceMap) getPartitionWithIndex(key interface{}) (partition int, index int, err error) {
 	if m.index == nil || m.lenOfBucket == 0 {
@@ -69,7 +71,7 @@ func (m *ConcurrentSliceMap) getPartitionWithIndex(key interface{}) (partition i
 	}
 
 	partition = p
-	index = p % m.lenOfBucket
+	index = n.(int) % m.lenOfBucket
 
 	return partition, index, err
 }
@@ -79,11 +81,17 @@ func (m *ConcurrentSliceMap) Len() int {
 }
 
 func (m *ConcurrentSliceMap) Load(key interface{}) (interface{}, bool) {
-	p, i, e := m.getPartitionWithIndex(key)
-	if e != nil || m.partitions[p].s[i] == nil {
+	partition, index, err := m.getPartitionWithIndex(key)
+	if err != nil || m.partitions[partition].s[index] == nil {
 		return nil, false
 	}
-	return m.partitions[p].s[i], true
+
+	p := atomic.LoadPointer(&m.partitions[partition].s[index])
+	if p == nil || p == expunged {
+		return nil, false
+	}
+
+	return *(*interface{})(p), true
 }
 
 func (m *ConcurrentSliceMap) Store(key interface{}, v interface{}) {
