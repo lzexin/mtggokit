@@ -124,5 +124,7 @@ func (m *ConcurrentSliceMap) Delete(key interface{}) {
 }
 
 func (m *ConcurrentSliceMap) Range(f func(key, value interface{}) bool) {
-	m.index.Range(f)
+	if m.index != nil {
+		m.index.Range(f)
+	}
 }

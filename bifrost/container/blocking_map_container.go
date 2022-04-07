@@ -75,6 +75,7 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 	}
 	f := float64(bm.errorNum) / float64(bm.totalNum)
 	if f > bm.Tolerate {
+		bm.InnerData = &ConcurrentSliceMap{}
 		return errors.New(fmt.Sprintf("LoadBase error, tolerate[%f], err[%f]", bm.Tolerate, f))
 	}
 	return nil
