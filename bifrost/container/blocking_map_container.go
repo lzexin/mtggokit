@@ -78,7 +78,6 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 		bm.InnerData = &ConcurrentSliceMap2{}
 		return errors.New(fmt.Sprintf("LoadBase error, tolerate[%f], err[%f]", bm.Tolerate, f))
 	}
-	bm.InnerData.updateFlag = false
 	return nil
 }
 
@@ -87,7 +86,6 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 	if e != nil {
 		return fmt.Errorf("LoadInc Error, err[%s]", e.Error())
 	}
-	bm.InnerData.updateFlag = true
 	for b {
 		m, k, v, e := iterator.Next()
 		bm.totalNum++
@@ -110,7 +108,6 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 			return fmt.Errorf("LoadInc Error, err[%s]", e.Error())
 		}
 	}
-	bm.InnerData.updateFlag = false
 	if bm.totalNum == 0 {
 		bm.totalNum = 1
 	}

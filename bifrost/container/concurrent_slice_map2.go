@@ -18,9 +18,8 @@ import (
 // 在删除元素上，最慢的是原生 map+读写锁，其次是原生 map+互斥锁，最快的是 sync.map 类型。
 
 type ConcurrentSliceMap2 struct {
-	totalNum   int                 // 当前所存数据量级，新数据下标
-	index      map[interface{}]int // 维护数据在slice中的下标
-	updateFlag bool                // index不会更新，因此对外暴露一个flag，flag默认为true保证线程安全，但当flag=false时，代表没有写操作，可不加锁
+	totalNum int                 // 当前所存数据量级，新数据下标
+	index    map[interface{}]int // 维护数据在slice中的下标
 
 	partitions []*innerSlice2 // 分桶slice
 	mu         sync.RWMutex   // 读写锁 - 扩容partitions时需要加锁
@@ -40,7 +39,6 @@ func CreateConcurrentSliceMap2(lenOfBucket int) *ConcurrentSliceMap2 {
 		index:       map[interface{}]int{},
 		partitions:  []*innerSlice2{},
 		lenOfBucket: lenOfBucket,
-		updateFlag:  true,
 	}
 }
 
@@ -83,19 +81,9 @@ func (m *ConcurrentSliceMap2) Len() int {
 	return m.totalNum
 }
 
-func (m *ConcurrentSliceMap2) Load(key interface{}) (p interface{}, b bool) {
-	if m.updateFlag {
-		m.mu.Lock()
-		p, b = m.load(key)
-		m.mu.Unlock()
-	} else {
-		p, b = m.load(key)
-	}
+func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
+	m.mu.RLock()
 
-	return
-}
-
-func (m *ConcurrentSliceMap2) load(key interface{}) (interface{}, bool) {
 	partition, index, err := m.getPartitionWithIndex(key)
 	if err != nil || m.partitions[partition].s[index] == nil {
 		return nil, false
@@ -105,6 +93,8 @@ func (m *ConcurrentSliceMap2) load(key interface{}) (interface{}, bool) {
 	if p == nil || p == expunged {
 		return nil, false
 	}
+
+	m.mu.RUnlock()
 
 	return *(*interface{})(p), true
 }
@@ -120,7 +110,6 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	// 2. 若没有往后增加
 	partition := m.totalNum / m.lenOfBucket //新数据的桶
 	index := m.totalNum % m.lenOfBucket     //新数据的下标
-
 
 	if partition >= len(m.partitions) {
 		m.partitions = append(m.partitions, createInnerMap2(m.lenOfBucket))
