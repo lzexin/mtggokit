@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -55,11 +56,11 @@ func (m *ConcurrentSliceMap2) getPartitionWithIndex(key interface{}) (partition 
 	}
 
 	n, in := m.index[key] // 获取key对应的下标(>=0)
-
 	if !in {
 		err = NotPartition
 		return
 	}
+	fmt.Println("num:", n)
 
 	p := n / m.lenOfBucket
 	if p > len(m.partitions)-1 {
@@ -110,6 +111,7 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	if partition >= len(m.partitions) {
 		m.partitions = append(m.partitions, createInnerMap2(m.lenOfBucket))
 	}
+	fmt.Println("partiition:", partition, index)
 	m.partitions[partition].s[index] = unsafe.Pointer(&v)
 	m.index[key] = m.totalNum
 	m.mu.Unlock()

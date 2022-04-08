@@ -71,6 +71,7 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 			return fmt.Errorf("LoadBase Error, err[%s]", e.Error())
 		}
 	}
+	fmt.Println(5)
 	if bm.totalNum == 0 {
 		bm.totalNum = 1
 	}
