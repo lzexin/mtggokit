@@ -55,10 +55,6 @@ func (m *ConcurrentSliceMap2) getPartitionWithIndex(key interface{}) (partition 
 	}
 
 	n, in := m.index[key] // 获取key对应的下标(>=0)
-	if !in {
-		err = NotPartition
-		return
-	}
 
 	if !in {
 		err = NotPartition

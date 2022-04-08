@@ -119,12 +119,7 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 }
 
 func (bm *BlockingMapContainer) Len() int {
-	l := 0
-	bm.Range(func(key, value interface{}) bool {
-		l++
-		return true
-	})
-	return l
+	return bm.InnerData.Len()
 }
 
 func (bm *BlockingMapContainer) Range(f func(key, value interface{}) bool) {
