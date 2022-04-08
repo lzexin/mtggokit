@@ -60,6 +60,30 @@ func (m *ConcurrentSliceMap2) getPartitionWithIndex(key interface{}) (partition 
 		err = NotPartition
 		return
 	}
+
+	p := n / m.lenOfBucket
+	if p > len(m.partitions)-1 {
+		err = NotPartition
+		return
+	}
+
+	partition = p
+	index = n % m.lenOfBucket
+
+	return partition, index, err
+}
+
+func (m *ConcurrentSliceMap2) getPartitionWithIndex2(key interface{}) (partition int, index int, err error) {
+	if m.index == nil || m.lenOfBucket == 0 {
+		err = NotPartition
+		return
+	}
+
+	n, in := m.index[key] // 获取key对应的下标(>=0)
+	if !in {
+		err = NotPartition
+		return
+	}
 	fmt.Println("当前key的数量num:", n)
 
 	p := n / m.lenOfBucket
@@ -100,9 +124,11 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	m.mu.Lock()
 	fmt.Println("存储数据", key)
 	// 1. 判断该key是否已记录下标，若有直接替换
-	if p, i, e := m.getPartitionWithIndex(key); e == nil {
-		fmt.Println("已存在下标，直接替换")
+	if p, i, e := m.getPartitionWithIndex2(key); e == nil {
+		fmt.Println("已存在下标，直接替换", p, "-", i)
+		fmt.Println(m.partitions[p])
 		m.partitions[p].s[i] = unsafe.Pointer(&v)
+		fmt.Println("已存在下标，替换完成")
 		return
 	}
 	fmt.Println("找不到下标，重新插入")
