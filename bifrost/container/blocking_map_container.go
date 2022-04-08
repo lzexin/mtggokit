@@ -43,6 +43,7 @@ func (bm *BlockingMapContainer) Del(key MapKey, value interface{}) {
 func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 	bm.errorNum = 0
 	bm.totalNum = 0
+	fmt.Println(4)
 
 	b, e := iterator.HasNext()
 	if e != nil {

@@ -139,6 +139,7 @@ func (ms *MongoStreamer) Next() (container.DataMode, container.MapKey, interface
 func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 	ms.lastBaseTime = time.Now()
 	if !ms.hasInit && ms.cfg.IsSync {
+		fmt.Println(1)
 		err := ms.loadBase(ctx)
 		if err != nil {
 			ms.WarnStatus("LoadBase error:" + err.Error())
@@ -147,6 +148,7 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 			ms.hasInit = true
 		}
 	}
+	fmt.Println(10)
 	go func() {
 		ms.lastBaseTime = time.Now()
 		if !ms.hasInit {
@@ -188,11 +190,13 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 			}
 		}
 	}()
+	fmt.Println(11)
 	return nil
 }
 
 func (ms *MongoStreamer) loadBase(ctx context.Context) (err error) {
 	for i := -1; i < ms.cfg.TryTimes; i++ {
+		fmt.Println(2)
 		err = ms.loadBase2(ctx)
 		if err == nil {
 			return nil
@@ -211,6 +215,7 @@ func (ms *MongoStreamer) loadBase2(context.Context) error {
 			return nil
 		}
 	}
+	fmt.Println(3)
 	ms.totalNum = 0
 	ms.errorNum = 0
 	cur, err := ms.collection.Find(nil, ms.cfg.BaseQuery, ms.findOpt)
