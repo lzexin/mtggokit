@@ -1,7 +1,6 @@
 package container
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -73,31 +72,6 @@ func (m *ConcurrentSliceMap2) getPartitionWithIndex(key interface{}) (partition 
 	return partition, index, err
 }
 
-func (m *ConcurrentSliceMap2) getPartitionWithIndex2(key interface{}) (partition int, index int, err error) {
-	if m.index == nil || m.lenOfBucket == 0 {
-		err = NotPartition
-		return
-	}
-
-	n, in := m.index[key] // 获取key对应的下标(>=0)
-	if !in {
-		err = NotPartition
-		return
-	}
-	fmt.Println("当前key的数量num:", n)
-
-	p := n / m.lenOfBucket
-	if p > len(m.partitions)-1 {
-		err = NotPartition
-		return
-	}
-
-	partition = p
-	index = n % m.lenOfBucket
-
-	return partition, index, err
-}
-
 func (m *ConcurrentSliceMap2) Len() int {
 	return m.totalNum
 }
@@ -122,16 +96,12 @@ func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
 
 func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	m.mu.Lock()
-	fmt.Println("存储数据", key)
 	// 1. 判断该key是否已记录下标，若有直接替换
-	if p, i, e := m.getPartitionWithIndex2(key); e == nil {
-		fmt.Println("已存在下标，直接替换", p, "-", i)
-		fmt.Println(m.partitions[p])
+	if p, i, e := m.getPartitionWithIndex(key); e == nil {
 		m.partitions[p].s[i] = unsafe.Pointer(&v)
-		fmt.Println("已存在下标，替换完成")
+		m.mu.Unlock()
 		return
 	}
-	fmt.Println("找不到下标，重新插入")
 
 	// 2. 若没有往后增加
 	partition := m.totalNum / m.lenOfBucket //新数据的桶
@@ -140,11 +110,9 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	if partition >= len(m.partitions) {
 		m.partitions = append(m.partitions, createInnerMap2(m.lenOfBucket))
 	}
-	fmt.Println("partiition:", partition, index)
 	m.partitions[partition].s[index] = unsafe.Pointer(&v)
 	m.index[key] = m.totalNum
 	m.totalNum++
-	fmt.Println("存储完成", key, ",第", m.totalNum)
 
 	m.mu.Unlock()
 }
