@@ -147,47 +147,54 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 			ms.hasInit = true
 		}
 	}
-	go func() {
-		ms.lastBaseTime = time.Now()
-		if !ms.hasInit {
-			err := ms.loadBase(ctx)
-			if err != nil {
-				ms.WarnStatus("LoadBase error:" + err.Error())
-			} else {
-				ms.InfoStatus("LoadBase succ")
-			}
-		}
-		inc := time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
-		base := time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
-		if ms.cfg.BaseInterval == 0 {
-			base = nil
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				ms.InfoStatus("LoadInc Finish:")
-				return
-			case <-inc:
-				ms.lastIncTime = time.Now()
-				err := ms.loadInc(ctx)
-				if err != nil {
-					ms.WarnStatus("LoadInc Error:" + err.Error())
-				} else {
-					ms.InfoStatus("LoadInc Succ:")
-				}
-				inc = time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
-			case <-base:
-				ms.lastBaseTime = time.Now()
-				err := ms.loadBase(ctx)
-				if err != nil {
-					ms.WarnStatus("LoadBase Error:" + err.Error())
-				} else {
-					ms.InfoStatus("LoadBase Succ:")
-				}
-				base = time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
-			}
-		}
-	}()
+	ms.lastIncTime = time.Now()
+	err := ms.loadInc(ctx)
+	if err != nil {
+		ms.WarnStatus("LoadInc Error:" + err.Error())
+	} else {
+		ms.InfoStatus("LoadInc Succ:")
+	}
+	//go func() {
+	//	ms.lastBaseTime = time.Now()
+	//	if !ms.hasInit {
+	//		err := ms.loadBase(ctx)
+	//		if err != nil {
+	//			ms.WarnStatus("LoadBase error:" + err.Error())
+	//		} else {
+	//			ms.InfoStatus("LoadBase succ")
+	//		}
+	//	}
+	//	inc := time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
+	//	base := time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
+	//	if ms.cfg.BaseInterval == 0 {
+	//		base = nil
+	//	}
+	//	for {
+	//		select {
+	//		case <-ctx.Done():
+	//			ms.InfoStatus("LoadInc Finish:")
+	//			return
+	//		case <-inc:
+	//			ms.lastIncTime = time.Now()
+	//			err := ms.loadInc(ctx)
+	//			if err != nil {
+	//				ms.WarnStatus("LoadInc Error:" + err.Error())
+	//			} else {
+	//				ms.InfoStatus("LoadInc Succ:")
+	//			}
+	//			inc = time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
+	//		case <-base:
+	//			ms.lastBaseTime = time.Now()
+	//			err := ms.loadBase(ctx)
+	//			if err != nil {
+	//				ms.WarnStatus("LoadBase Error:" + err.Error())
+	//			} else {
+	//				ms.InfoStatus("LoadBase Succ:")
+	//			}
+	//			base = time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
+	//		}
+	//	}
+	//}()
 	return nil
 }
 
