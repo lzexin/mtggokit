@@ -137,22 +137,26 @@ func (ms *MongoStreamer) Next() (container.DataMode, container.MapKey, interface
 }
 
 func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
-	ms.lastBaseTime = time.Now()
-	if !ms.hasInit && ms.cfg.IsSync {
-		err := ms.loadBase(ctx)
+	//ms.lastBaseTime = time.Now()
+	//if !ms.hasInit && ms.cfg.IsSync {
+	//	err := ms.loadBase(ctx)
+	//	if err != nil {
+	//		ms.WarnStatus("LoadBase error:" + err.Error())
+	//	} else {
+	//		ms.InfoStatus("LoadBase Succ")
+	//		ms.hasInit = true
+	//	}
+	//}
+	if ms.collection.Name() == "campaign" {
+		ms.lastIncTime = time.Now()
+		fmt.Println(1)
+		err := ms.loadInc(ctx)
+		fmt.Println(100)
 		if err != nil {
-			ms.WarnStatus("LoadBase error:" + err.Error())
+			ms.WarnStatus("LoadInc Error:" + err.Error())
 		} else {
-			ms.InfoStatus("LoadBase Succ")
-			ms.hasInit = true
+			ms.InfoStatus("LoadInc Succ:")
 		}
-	}
-	ms.lastIncTime = time.Now()
-	err := ms.loadInc(ctx)
-	if err != nil {
-		ms.WarnStatus("LoadInc Error:" + err.Error())
-	} else {
-		ms.InfoStatus("LoadInc Succ:")
 	}
 	//go func() {
 	//	ms.lastBaseTime = time.Now()
@@ -255,7 +259,9 @@ func (ms *MongoStreamer) loadInc(ctx context.Context) error {
 	}
 	ms.cursor = cur
 	ms.curParser = ms.cfg.IncParser
+	fmt.Println(2)
 	err = ms.container.LoadInc(ms)
+	fmt.Println(200)
 	ms.incTimeUsed = time.Now().Sub(ms.lastIncTime)
 	if ms.cfg.OnFinishInc != nil {
 		ms.cfg.OnFinishInc(ms)

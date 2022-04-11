@@ -82,10 +82,12 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 }
 
 func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
+	fmt.Println(3)
 	b, e := iterator.HasNext()
 	if e != nil {
 		return fmt.Errorf("LoadInc Error, err[%s]", e.Error())
 	}
+	fmt.Println(300)
 	for b {
 		m, k, v, e := iterator.Next()
 		bm.totalNum++
@@ -97,6 +99,7 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 			}
 			continue
 		}
+		fmt.Println(300, "-", m, "-", k, "-", v, "-", e)
 		switch m {
 		case DataModeAdd, DataModeUpdate:
 			bm.InnerData.Store(k.Value(), v)
@@ -112,9 +115,11 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 		bm.totalNum = 1
 	}
 	f := float64(bm.errorNum) / float64(bm.totalNum)
+	fmt.Println(301)
 	if f > bm.Tolerate {
 		return errors.New(fmt.Sprintf("LoadInc error, tolerate[%f], err[%f]", bm.Tolerate, f))
 	}
+	fmt.Println(300)
 	return nil
 }
 
