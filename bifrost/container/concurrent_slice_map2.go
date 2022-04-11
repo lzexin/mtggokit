@@ -18,8 +18,9 @@ import (
 // 在删除元素上，最慢的是原生 map+读写锁，其次是原生 map+互斥锁，最快的是 sync.map 类型。
 
 type ConcurrentSliceMap2 struct {
-	totalNum int                 // 当前所存数据量级，新数据下标
-	index    map[interface{}]int // 维护数据在slice中的下标
+	totalNum    int                 // 当前所存数据量级，新数据下标
+	index       map[interface{}]int // 维护数据在slice中的下标
+	inactiveNum int                 // 已失效数量
 
 	partitions []*innerSlice2 // 分桶slice
 	mu         sync.RWMutex   // 读写锁 - 扩容partitions时需要加锁
@@ -73,7 +74,7 @@ func (m *ConcurrentSliceMap2) getPartitionWithIndex(key interface{}) (partition 
 }
 
 func (m *ConcurrentSliceMap2) Len() int {
-	return m.totalNum
+	return m.totalNum - m.inactiveNum
 }
 
 func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
@@ -122,6 +123,7 @@ func (m *ConcurrentSliceMap2) Delete(key interface{}) {
 	p, i, e := m.getPartitionWithIndex(key)
 	if e == nil {
 		m.partitions[p].s[i] = nil
+		m.inactiveNum++
 	}
 	m.mu.Lock()
 }
