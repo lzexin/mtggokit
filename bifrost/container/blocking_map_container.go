@@ -7,7 +7,7 @@ import (
 
 // 多线程读写安全的container，支持增量
 type BlockingMapContainer struct {
-	InnerData *ConcurrentSliceMap2
+	InnerData *ConcurrentSliceMap
 	errorNum  int64
 	totalNum  int64
 	Tolerate  float64
@@ -15,7 +15,7 @@ type BlockingMapContainer struct {
 
 func CreateBlockingMapContainer(numPartision int, tolerate float64) *BlockingMapContainer {
 	return &BlockingMapContainer{
-		InnerData: CreateConcurrentSliceMap2(10000),
+		InnerData: CreateConcurrentSliceMap(10000),
 		Tolerate:  tolerate,
 	}
 }
@@ -75,7 +75,7 @@ func (bm *BlockingMapContainer) LoadBase(iterator DataIterator) error {
 	}
 	f := float64(bm.errorNum) / float64(bm.totalNum)
 	if f > bm.Tolerate {
-		bm.InnerData = &ConcurrentSliceMap2{}
+		bm.InnerData = &ConcurrentSliceMap{}
 		return errors.New(fmt.Sprintf("LoadBase error, tolerate[%f], err[%f]", bm.Tolerate, f))
 	}
 	return nil
