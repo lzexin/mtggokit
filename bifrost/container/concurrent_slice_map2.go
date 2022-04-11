@@ -118,12 +118,12 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 }
 
 func (m *ConcurrentSliceMap2) Delete(key interface{}) {
-	m.mu.Lock()
+	m.mu.RLock()
 	p, i, e := m.getPartitionWithIndex(key)
 	if e == nil {
 		m.partitions[p].s[i] = nil
 	}
-	m.mu.Unlock()
+	m.mu.RUnlock()
 }
 
 func (m *ConcurrentSliceMap2) Range(f func(key, value interface{}) bool) {
