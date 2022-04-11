@@ -248,9 +248,7 @@ func (ms *MongoStreamer) loadInc(ctx context.Context) error {
 	}
 	ms.cursor = cur
 	ms.curParser = ms.cfg.IncParser
-	fmt.Println(2)
 	err = ms.container.LoadInc(ms)
-	fmt.Println(200)
 	ms.incTimeUsed = time.Now().Sub(ms.lastIncTime)
 	if ms.cfg.OnFinishInc != nil {
 		ms.cfg.OnFinishInc(ms)
