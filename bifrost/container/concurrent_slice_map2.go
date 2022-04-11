@@ -1,7 +1,6 @@
 package container
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -98,11 +97,9 @@ func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
 
 func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	m.mu.Lock()
-	fmt.Println(key)
 	// 1. 判断该key是否已记录下标，若有直接替换
 	if p, i, e := m.getPartitionWithIndex(key); e == nil {
 		m.partitions[p].s[i] = unsafe.Pointer(&v)
-		fmt.Println("已存在", key, p, i, e)
 		m.mu.Unlock()
 		return
 	}
@@ -117,7 +114,6 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	m.partitions[partition].s[index] = unsafe.Pointer(&v)
 	m.index[key] = m.totalNum
 	m.totalNum++
-	fmt.Println("不存在", "key=", key, "value:", v, partition, index, m.totalNum)
 
 	m.mu.Unlock()
 }
@@ -129,7 +125,7 @@ func (m *ConcurrentSliceMap2) Delete(key interface{}) {
 		m.partitions[p].s[i] = nil
 		m.inactiveNum++
 	}
-	m.mu.Lock()
+	m.mu.Unlock()
 }
 
 func (m *ConcurrentSliceMap2) Range(f func(key, value interface{}) bool) {

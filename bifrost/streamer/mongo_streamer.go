@@ -137,68 +137,57 @@ func (ms *MongoStreamer) Next() (container.DataMode, container.MapKey, interface
 }
 
 func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
-	//ms.lastBaseTime = time.Now()
-	//if !ms.hasInit && ms.cfg.IsSync {
-	//	err := ms.loadBase(ctx)
-	//	if err != nil {
-	//		ms.WarnStatus("LoadBase error:" + err.Error())
-	//	} else {
-	//		ms.InfoStatus("LoadBase Succ")
-	//		ms.hasInit = true
-	//	}
-	//}
-	if ms.collection.Name() == "campaign" {
-		ms.lastIncTime = time.Now()
-		fmt.Println(1)
-		err := ms.loadInc(ctx)
-		fmt.Println(100)
+	ms.lastBaseTime = time.Now()
+	if !ms.hasInit && ms.cfg.IsSync {
+		err := ms.loadBase(ctx)
 		if err != nil {
-			ms.WarnStatus("LoadInc Error:" + err.Error())
+			ms.WarnStatus("LoadBase error:" + err.Error())
 		} else {
-			ms.InfoStatus("LoadInc Succ:")
+			ms.InfoStatus("LoadBase Succ")
+			ms.hasInit = true
 		}
 	}
-	//go func() {
-	//	ms.lastBaseTime = time.Now()
-	//	if !ms.hasInit {
-	//		err := ms.loadBase(ctx)
-	//		if err != nil {
-	//			ms.WarnStatus("LoadBase error:" + err.Error())
-	//		} else {
-	//			ms.InfoStatus("LoadBase succ")
-	//		}
-	//	}
-	//	inc := time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
-	//	base := time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
-	//	if ms.cfg.BaseInterval == 0 {
-	//		base = nil
-	//	}
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			ms.InfoStatus("LoadInc Finish:")
-	//			return
-	//		case <-inc:
-	//			ms.lastIncTime = time.Now()
-	//			err := ms.loadInc(ctx)
-	//			if err != nil {
-	//				ms.WarnStatus("LoadInc Error:" + err.Error())
-	//			} else {
-	//				ms.InfoStatus("LoadInc Succ:")
-	//			}
-	//			inc = time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
-	//		case <-base:
-	//			ms.lastBaseTime = time.Now()
-	//			err := ms.loadBase(ctx)
-	//			if err != nil {
-	//				ms.WarnStatus("LoadBase Error:" + err.Error())
-	//			} else {
-	//				ms.InfoStatus("LoadBase Succ:")
-	//			}
-	//			base = time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
-	//		}
-	//	}
-	//}()
+	go func() {
+		ms.lastBaseTime = time.Now()
+		if !ms.hasInit {
+			err := ms.loadBase(ctx)
+			if err != nil {
+				ms.WarnStatus("LoadBase error:" + err.Error())
+			} else {
+				ms.InfoStatus("LoadBase succ")
+			}
+		}
+		inc := time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
+		base := time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
+		if ms.cfg.BaseInterval == 0 {
+			base = nil
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				ms.InfoStatus("LoadInc Finish:")
+				return
+			case <-inc:
+				ms.lastIncTime = time.Now()
+				err := ms.loadInc(ctx)
+				if err != nil {
+					ms.WarnStatus("LoadInc Error:" + err.Error())
+				} else {
+					ms.InfoStatus("LoadInc Succ:")
+				}
+				inc = time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
+			case <-base:
+				ms.lastBaseTime = time.Now()
+				err := ms.loadBase(ctx)
+				if err != nil {
+					ms.WarnStatus("LoadBase Error:" + err.Error())
+				} else {
+					ms.InfoStatus("LoadBase Succ:")
+				}
+				base = time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
+			}
+		}
+	}()
 	return nil
 }
 
