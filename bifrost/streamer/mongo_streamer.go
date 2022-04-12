@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"time"
-
 )
 
 type MongoStreamer struct {
@@ -147,6 +146,7 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 			ms.hasInit = true
 		}
 	}
+	// test
 	if ms.collection.Name() == "creative" {
 		ms.lastIncTime = time.Now()
 		err := ms.loadInc(ctx)
@@ -154,6 +154,48 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 			fmt.Println(err)
 		}
 	}
+	go func() {
+		ms.lastBaseTime = time.Now()
+		if !ms.hasInit {
+			err := ms.loadBase(ctx)
+			if err != nil {
+				ms.WarnStatus("LoadBase error:" + err.Error())
+			} else {
+				ms.InfoStatus("LoadBase succ")
+			}
+		}
+		inc := time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
+		base := time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
+		if ms.cfg.BaseInterval == 0 {
+			base = nil
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				ms.InfoStatus("LoadInc Finish:")
+				return
+			case <-inc:
+				ms.lastIncTime = time.Now()
+				err := ms.loadInc(ctx)
+				if err != nil {
+					ms.WarnStatus("LoadInc Error:" + err.Error())
+				} else {
+					ms.InfoStatus("LoadInc Succ:")
+				}
+				inc = time.After(time.Duration(ms.cfg.IncInterval) * time.Second)
+			case <-base:
+				ms.lastBaseTime = time.Now()
+				err := ms.loadBase(ctx)
+				if err != nil {
+					ms.WarnStatus("LoadBase Error:" + err.Error())
+				} else {
+					ms.InfoStatus("LoadBase Succ:")
+				}
+				base = time.After(time.Duration(ms.cfg.BaseInterval) * time.Second)
+			}
+		}
+	}()
+	return nil
 	//--------test
 	go func() {
 		ms.lastBaseTime = time.Now()
@@ -256,9 +298,9 @@ func (ms *MongoStreamer) loadInc(ctx context.Context) error {
 	}
 	ms.cursor = cur
 	ms.curParser = ms.cfg.IncParser
-	fmt.Println(1)
+	fmt.Println("debug:", ms.collection.Name(), 1)
 	err = ms.container.LoadInc(ms)
-	fmt.Println(100)
+	fmt.Println("debug:", ms.collection.Name(),100)
 	ms.incTimeUsed = time.Now().Sub(ms.lastIncTime)
 	if ms.cfg.OnFinishInc != nil {
 		ms.cfg.OnFinishInc(ms)
