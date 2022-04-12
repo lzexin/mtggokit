@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"runtime/debug"
 	"time"
 )
 
@@ -168,13 +167,6 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 				ms.InfoStatus("LoadInc Finish:")
 				return
 			case <-inc:
-				if err := recover(); err != nil {
-					//输出panic信息
-					fmt.Println("panic:", err)
-
-					//输出堆栈信息
-					fmt.Println(string(debug.Stack()))
-				}
 				ms.lastIncTime = time.Now()
 				err := ms.loadInc(ctx)
 				if err != nil {
@@ -255,9 +247,7 @@ func (ms *MongoStreamer) loadInc(ctx context.Context) error {
 	}
 	ms.cursor = cur
 	ms.curParser = ms.cfg.IncParser
-	fmt.Println("Debug:", ms.collection.Name(), 1)
 	err = ms.container.LoadInc(ms)
-	fmt.Println("Debug:", ms.collection.Name(),100, err)
 	ms.incTimeUsed = time.Now().Sub(ms.lastIncTime)
 	if ms.cfg.OnFinishInc != nil {
 		ms.cfg.OnFinishInc(ms)

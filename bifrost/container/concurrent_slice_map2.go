@@ -1,7 +1,6 @@
 package container
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -79,19 +78,18 @@ func (m *ConcurrentSliceMap2) Len() int {
 
 func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
 	m.mu.RLock()
-	fmt.Println("开始获取")
 
 	partition, index, err := m.getPartitionWithIndex(key)
-	fmt.Println("获取下标", partition, index, err)
 	if err != nil || m.partitions[partition].s[index] == nil {
+		m.mu.RUnlock()
 		return nil, false
 	}
 
 	p := atomic.LoadPointer(&m.partitions[partition].s[index])
 	if p == nil || p == expunged {
+		m.mu.RUnlock()
 		return nil, false
 	}
-	fmt.Println("获取成功", *(*interface{})(p))
 
 	m.mu.RUnlock()
 
@@ -99,13 +97,9 @@ func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
 }
 
 func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
-	fmt.Println("准备拿锁")
 	m.mu.Lock()
-	fmt.Println("拿到锁")
-	fmt.Println("开始存储", key)
 	// 1. 判断该key是否已记录下标，若有直接替换
 	if p, i, e := m.getPartitionWithIndex(key); e == nil {
-		fmt.Println("找到下标直接替换", p, i, e)
 		m.partitions[p].s[i] = unsafe.Pointer(&v)
 		m.mu.Unlock()
 		return
@@ -121,22 +115,14 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 	m.partitions[partition].s[index] = unsafe.Pointer(&v)
 	m.index[key] = m.totalNum
 	m.totalNum++
-	fmt.Println("找不到下标，存在", partition, index)
-
 	m.mu.Unlock()
 }
 
 func (m *ConcurrentSliceMap2) Delete(key interface{}) {
-	fmt.Println("准备拿锁")
 	m.mu.RLock()
-	fmt.Println("拿到锁")
-	fmt.Println("开始删除")
 	p, i, e := m.getPartitionWithIndex(key)
-	if e == nil {
-		fmt.Println("删除", p, i)
+	if e == nil && m.partitions[p].s[i] != nil {
 		m.partitions[p].s[i] = nil
-	} else {
-		fmt.Println("无下标，不删除")
 	}
 	m.mu.RUnlock()
 }
