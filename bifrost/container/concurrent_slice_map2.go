@@ -99,8 +99,10 @@ func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
 }
 
 func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
+	fmt.Println("准备拿锁")
 	m.mu.Lock()
-	fmt.Println("开始存储", key, v)
+	fmt.Println("拿到锁")
+	fmt.Println("开始存储", key)
 	// 1. 判断该key是否已记录下标，若有直接替换
 	if p, i, e := m.getPartitionWithIndex(key); e == nil {
 		fmt.Println("找到下标直接替换", p, i, e)
@@ -131,8 +133,9 @@ func (m *ConcurrentSliceMap2) Delete(key interface{}) {
 	if e == nil {
 		fmt.Println("删除", p, i)
 		m.partitions[p].s[i] = nil
+	} else {
+		fmt.Println("无下标，不删除")
 	}
-	fmt.Println("无下标，不删除")
 	m.mu.RUnlock()
 }
 

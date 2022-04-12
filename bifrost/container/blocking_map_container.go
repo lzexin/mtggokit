@@ -98,7 +98,7 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 			}
 			continue
 		}
-		fmt.Println(201, "---操作：", m, k, v)
+		fmt.Println(201, "---操作：", m, k)
 		switch m {
 		case DataModeAdd, DataModeUpdate:
 			bm.InnerData.Store(k.Value(), v)
@@ -106,7 +106,7 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 			bm.Del(k, v)
 		}
 		b, e = iterator.HasNext()
-		fmt.Println(201, "---操作完毕：", m, k, v, b)
+		fmt.Println(201, "---操作完毕：", m, k, b)
 		if e != nil {
 			return fmt.Errorf("LoadInc Error, err[%s]", e.Error())
 		}
