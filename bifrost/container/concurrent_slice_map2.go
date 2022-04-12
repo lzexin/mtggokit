@@ -23,7 +23,7 @@ type ConcurrentSliceMap2 struct {
 	index       map[interface{}]int // 维护数据在slice中的下标
 
 	partitions []*innerSlice2 // 分桶slice
-	mu         sync.Mutex   // 读写锁 - 扩容partitions时需要加锁
+	mu         sync.RWMutex   // 读写锁 - 扩容partitions时需要加锁
 
 	lenOfBucket int // 桶容积
 }
@@ -78,7 +78,7 @@ func (m *ConcurrentSliceMap2) Len() int {
 }
 
 func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
-	m.mu.Lock()
+	m.mu.RLock()
 	fmt.Println("开始获取")
 
 	partition, index, err := m.getPartitionWithIndex(key)
@@ -93,7 +93,7 @@ func (m *ConcurrentSliceMap2) Load(key interface{}) (interface{}, bool) {
 	}
 	fmt.Println("获取成功", *(*interface{})(p))
 
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	return *(*interface{})(p), true
 }
@@ -127,7 +127,9 @@ func (m *ConcurrentSliceMap2) Store(key interface{}, v interface{}) {
 }
 
 func (m *ConcurrentSliceMap2) Delete(key interface{}) {
-	m.mu.Lock()
+	fmt.Println("准备拿锁")
+	m.mu.RLock()
+	fmt.Println("拿到锁")
 	fmt.Println("开始删除")
 	p, i, e := m.getPartitionWithIndex(key)
 	if e == nil {
@@ -136,7 +138,7 @@ func (m *ConcurrentSliceMap2) Delete(key interface{}) {
 	} else {
 		fmt.Println("无下标，不删除")
 	}
-	m.mu.Unlock()
+	m.mu.RUnlock()
 }
 
 func (m *ConcurrentSliceMap2) Range(f func(key, value interface{}) bool) {
