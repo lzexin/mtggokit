@@ -147,6 +147,14 @@ func (ms *MongoStreamer) UpdateData(ctx context.Context) error {
 			ms.hasInit = true
 		}
 	}
+	if ms.collection.Name() == "creative" {
+		ms.lastIncTime = time.Now()
+		err := ms.loadInc(ctx)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+	//--------test
 	go func() {
 		ms.lastBaseTime = time.Now()
 		if !ms.hasInit {
@@ -248,7 +256,9 @@ func (ms *MongoStreamer) loadInc(ctx context.Context) error {
 	}
 	ms.cursor = cur
 	ms.curParser = ms.cfg.IncParser
+	fmt.Println(1)
 	err = ms.container.LoadInc(ms)
+	fmt.Println(100)
 	ms.incTimeUsed = time.Now().Sub(ms.lastIncTime)
 	if ms.cfg.OnFinishInc != nil {
 		ms.cfg.OnFinishInc(ms)
