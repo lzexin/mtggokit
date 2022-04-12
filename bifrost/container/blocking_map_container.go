@@ -116,9 +116,11 @@ func (bm *BlockingMapContainer) LoadInc(iterator DataIterator) error {
 	}
 	fmt.Println(202)
 	f := float64(bm.errorNum) / float64(bm.totalNum)
+	fmt.Println(203)
 	if f > bm.Tolerate {
 		return errors.New(fmt.Sprintf("LoadInc error, tolerate[%f], err[%f]", bm.Tolerate, f))
 	}
+	fmt.Println(204)
 	return nil
 }
 
