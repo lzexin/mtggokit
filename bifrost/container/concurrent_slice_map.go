@@ -7,23 +7,12 @@ import (
 	"unsafe"
 )
 
-// todo 先确认功能能跑通，再优化部分性能
-// 1.delete、update操作map下标不删除，只置空slice。
-// 2.slice不能用append，需要提前初始化，或者分桶append。
-// 3.map+mutex对比 sync.map性能，读>写时sync.map更快
-// 4.slice 线程不安全问题
-// 5. （mutex + slice） + map 对比  sync.map+(slice+mutex)
-// 6. 分段锁
-// 在查找元素上，最慢的是原生 map+互斥锁，其次是原生 map+读写锁。最快的是 sync.map 类型。
-// 在写入元素上，最慢的是 sync.map 类型，其次是原生 map+互斥锁（Mutex），最快的是原生 map+读写锁（RwMutex）。
-// 在删除元素上，最慢的是原生 map+读写锁，其次是原生 map+互斥锁，最快的是 sync.map 类型。
-
 type ConcurrentSliceMap struct {
-	totalNum int       // 当前所存数据量级，新数据下标
-	index    *sync.Map // 维护数据在slice中的下标
+	totalNum    int                 // 当前所存数据量级，新数据下标
+	index       map[interface{}]int // 维护数据在slice中的下标
 
-	mu         sync.RWMutex  // 读写锁 - 扩容partitions时需要加锁
 	partitions []*innerSlice // 分桶slice
+	mu         sync.RWMutex   // 读写锁 - 扩容partitions时需要加锁
 
 	lenOfBucket int // 桶容积
 }
@@ -37,7 +26,7 @@ type innerSlice struct {
 func CreateConcurrentSliceMap(lenOfBucket int) *ConcurrentSliceMap {
 	return &ConcurrentSliceMap{
 		totalNum:    0,
-		index:       &sync.Map{},
+		index:       map[interface{}]int{},
 		partitions:  []*innerSlice{},
 		lenOfBucket: lenOfBucket,
 	}
@@ -58,20 +47,20 @@ func (m *ConcurrentSliceMap) getPartitionWithIndex(key interface{}) (partition i
 		return
 	}
 
-	n, in := m.index.Load(key) // 获取key对应的下标(>=0)
+	n, in := m.index[key] // 获取key对应的下标(>=0)
 	if !in {
 		err = NotPartition
 		return
 	}
 
-	p := n.(int) / m.lenOfBucket
+	p := n / m.lenOfBucket
 	if p > len(m.partitions)-1 {
 		err = NotPartition
 		return
 	}
 
 	partition = p
-	index = n.(int) % m.lenOfBucket
+	index = n % m.lenOfBucket
 
 	return partition, index, err
 }
@@ -81,23 +70,31 @@ func (m *ConcurrentSliceMap) Len() int {
 }
 
 func (m *ConcurrentSliceMap) Load(key interface{}) (interface{}, bool) {
+	m.mu.RLock()
+
 	partition, index, err := m.getPartitionWithIndex(key)
 	if err != nil || m.partitions[partition].s[index] == nil {
+		m.mu.RUnlock()
 		return nil, false
 	}
 
 	p := atomic.LoadPointer(&m.partitions[partition].s[index])
 	if p == nil || p == expunged {
+		m.mu.RUnlock()
 		return nil, false
 	}
+
+	m.mu.RUnlock()
 
 	return *(*interface{})(p), true
 }
 
 func (m *ConcurrentSliceMap) Store(key interface{}, v interface{}) {
+	m.mu.Lock()
 	// 1. 判断该key是否已记录下标，若有直接替换
 	if p, i, e := m.getPartitionWithIndex(key); e == nil {
 		m.partitions[p].s[i] = unsafe.Pointer(&v)
+		m.mu.Unlock()
 		return
 	}
 
@@ -105,26 +102,24 @@ func (m *ConcurrentSliceMap) Store(key interface{}, v interface{}) {
 	partition := m.totalNum / m.lenOfBucket //新数据的桶
 	index := m.totalNum % m.lenOfBucket     //新数据的下标
 
-	m.mu.Lock()
 	if partition >= len(m.partitions) {
 		m.partitions = append(m.partitions, createInnerMap(m.lenOfBucket))
 	}
-	m.mu.Unlock()
-
 	m.partitions[partition].s[index] = unsafe.Pointer(&v)
-	m.index.Store(key, m.totalNum)
+	m.index[key] = m.totalNum
 	m.totalNum++
+	m.mu.Unlock()
 }
 
 func (m *ConcurrentSliceMap) Delete(key interface{}) {
+	m.mu.RLock()
 	p, i, e := m.getPartitionWithIndex(key)
-	if e == nil {
+	if e == nil && m.partitions[p].s[i] != nil {
 		m.partitions[p].s[i] = nil
 	}
+	m.mu.RUnlock()
 }
 
 func (m *ConcurrentSliceMap) Range(f func(key, value interface{}) bool) {
-	if m.index != nil {
-		m.index.Range(f)
-	}
+	return
 }
